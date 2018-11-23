@@ -46,6 +46,7 @@ public class UserHandler {
     }
 
     public Mono<ServerResponse> getByWebClient(ServerRequest request) {
+        get();
         String id = request.pathVariable("id");
         WebClient client = WebClient.create("http://127.0.0.1:9090");
         Mono<User> userMono = client.get()
@@ -74,5 +75,14 @@ public class UserHandler {
         restTemplate.setUriTemplateHandler(factory);
         Mono<User> userMono = Mono.just(restTemplate.getForObject("/api/user/" + id, User.class));
         return ServerResponse.ok().body(userMono, User.class);
+    }
+
+    public void get() {
+        WebClient client = WebClient.create("http://www.baidu.com");
+        for (int i = 1; i < 100; i++) {
+            Mono<String> stringMono = client.get().retrieve().bodyToMono(String.class);
+            stringMono.subscribe(str -> System.out.println(str));
+        }
+
     }
 }
