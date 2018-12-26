@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.OkHttp3ClientHttpRequestFactory;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -17,6 +19,8 @@ import reactor.core.publisher.Mono;
 /**
  * @author AYOU
  * @ClassName UserHandler
+ * WebClient为异步非阻塞http
+ * RestTemplate为阻塞http
  */
 @Component
 public class UserHandler {
@@ -48,7 +52,7 @@ public class UserHandler {
     public Mono<ServerResponse> getByWebClient(ServerRequest request) {
         get();
         String id = request.pathVariable("id");
-        WebClient client = WebClient.create("http://127.0.0.1:9090");
+        WebClient client = WebClient.create(baseUrl);
         Mono<User> userMono = client.get()
                 .uri("/api/user/{id}", id).accept(MediaType.APPLICATION_JSON)
                 .retrieve()
@@ -65,12 +69,15 @@ public class UserHandler {
         WebClient.ResponseSpec rsp = d.retrieve();
         Mono<User> userMono = rsp.bodyToMono(User.class);
         //会触发2次请求，会导致流关闭
-        ///userMono.subscribe(user -> System.err.println(user));
+        userMono.subscribe(System.err::println);
         return ServerResponse.ok().body(userMono, User.class);
     }
 
     public Mono<ServerResponse> getByRestTemplate(ServerRequest request) {
         String id = request.pathVariable("id");
+        new OkHttp3ClientHttpRequestFactory();
+        //new Netty4ClientHttpRequestFactory()
+        new ReactorClientHttpConnector();
         RestTemplate restTemplate = new RestTemplate();
         restTemplate.setUriTemplateHandler(factory);
         Mono<User> userMono = Mono.just(restTemplate.getForObject("/api/user/" + id, User.class));

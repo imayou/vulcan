@@ -1,13 +1,18 @@
 package io.ayou.vulcan.webflux.service;
 
+import io.netty.buffer.ByteBuf;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -50,6 +55,7 @@ public class JavaNio {
                     if (key.isAcceptable()) {
                         ServerSocketChannel server = (ServerSocketChannel) key.channel();
                         SocketChannel client = server.accept();
+                        client.configureBlocking(false);
                         //接受客户端并将他注册到选择器
                         client.register(selector, SelectionKey.OP_WRITE | SelectionKey.OP_READ, msg.duplicate());
                         System.out.println("Accepted connection from " + client);
@@ -58,23 +64,28 @@ public class JavaNio {
                     if (key.isWritable()) {
                         SocketChannel client = (SocketChannel) key.channel();
                         ByteBuffer buffer = (ByteBuffer) key.attachment();
+                        ByteBuffer rff = ByteBuffer.allocate(1024 * 1024);
                         //将数据写入已经连接的客户端
                         while (buffer.hasRemaining()) {
+                            if (client.read(rff) == 0) {
+                                break;
+                            }
                             if (client.write(buffer) == 0) {
                                 break;
                             }
                         }
+                        System.out.println(getString(rff));
                         //关闭连接
                         client.close();
                     }
                 } catch (IOException ex) {
+                    ex.printStackTrace();
                     key.cancel();
                     try {
                         key.channel().close();
                     } catch (IOException cex) {
                         //ignore on close
                     }
-
                 }
             }
 
@@ -88,6 +99,22 @@ public class JavaNio {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
 
+
+    public static String getString(ByteBuffer buffer) {
+        Charset charset = null;
+        CharsetDecoder decoder = null;
+        CharBuffer charBuffer = null;
+        try {
+            charset = Charset.forName("UTF-8");
+            decoder = charset.newDecoder();
+            // charBuffer = decoder.decode(buffer);//用这个的话，只能输出来一次结果，第二次显示为空
+            charBuffer = decoder.decode(buffer.asReadOnlyBuffer());
+            return charBuffer.toString();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "";
+        }
     }
 }
