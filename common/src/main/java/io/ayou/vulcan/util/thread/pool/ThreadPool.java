@@ -18,12 +18,12 @@ public interface ThreadPool {
     /**
      * 获取线程池的初始化大小
      */
-    void getInitSize();
+    int getInitSize();
 
     /**
      * 获取线程池最大的线程数
      */
-    void getMaxSize();
+    int getMaxSize();
 
     /**
      * 获取线程池的核心线程数量
